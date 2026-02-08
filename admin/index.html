@@ -1,0 +1,283 @@
+---
+layout: default
+---
+<div class="container mx-auto px-4 py-8 max-w-6xl">
+    <div class="flex justify-between items-center mb-10">
+        <div>
+            <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">Finance<span class="text-blue-600">Core</span></h1>
+            <p class="text-slate-500">Sistem Pencatatan Keuangan Perusahaan</p>
+        </div>
+        <div data-netlify-identity-button></div>
+    </div>
+
+    <div id="loading" class="hidden fixed inset-0 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-200 h-14 w-14"></div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div class="lg:col-span-2 glass p-6 rounded-3xl shadow-sm">
+            <h3 class="font-bold text-slate-700 mb-4 text-sm uppercase tracking-wider">Tren 7 Transaksi Terakhir</h3>
+            <div class="h-[250px]"><canvas id="financeChart"></canvas></div>
+        </div>
+        <div class="flex flex-col gap-4">
+            <div class="glass p-5 rounded-2xl shadow-sm hover:shadow-md transition">
+                <p class="text-slate-500 text-sm font-medium">Saldo Akhir</p>
+                <h2 class="text-2xl font-bold text-slate-800" id="total-balance">Rp 0</h2>
+            </div>
+            <div class="glass p-5 rounded-2xl shadow-sm border-l-4 border-green-500">
+                <p class="text-slate-500 text-sm font-medium">Total Pemasukan</p>
+                <h2 class="text-2xl font-bold text-green-600" id="total-income">Rp 0</h2>
+            </div>
+            <div class="glass p-5 rounded-2xl shadow-sm border-l-4 border-red-500">
+                <p class="text-slate-500 text-sm font-medium">Total Pengeluaran</p>
+                <h2 class="text-2xl font-bold text-red-600" id="total-expense">Rp 0</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-3xl shadow-sm mb-8 border border-slate-100">
+        <h3 class="text-lg font-bold text-slate-800 mb-4 text-center md:text-left">Catat Transaksi Baru</h3>
+        <form id="finance-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <input type="text" id="desc" placeholder="Keterangan" class="p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none transition" required>
+            <input type="number" id="amount" placeholder="Jumlah (Rp)" class="p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none transition" required>
+            <select id="type" class="p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none cursor-pointer">
+                <option value="income">Pemasukan</option>
+                <option value="expense">Pengeluaran</option>
+            </select>
+            <button type="submit" class="bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition transform active:scale-95 shadow-lg shadow-blue-200">
+                <i class="fas fa-plus mr-2"></i>Simpan
+            </button>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="p-6 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-4">
+            <h3 class="font-bold text-slate-800">Riwayat Transaksi</h3>
+            <div class="flex gap-2">
+                <button onclick="exportToCSV()" class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-emerald-200 transition">
+                    <i class="fas fa-download mr-2"></i>Export
+                </button>
+                <div class="flex bg-slate-100 p-1 rounded-xl">
+                    <button onclick="filterData('all', event)" class="filter-btn active-filter px-4 py-1.5 rounded-lg text-xs font-bold transition">Semua</button>
+                    <button onclick="filterData('income', event)" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold transition">Masuk</button>
+                    <button onclick="filterData('expense', event)" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold transition">Keluar</button>
+                </div>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-slate-50/50 text-slate-400 text-[10px] uppercase tracking-widest">
+                        <th class="p-4">Tanggal</th>
+                        <th class="p-4">Deskripsi</th>
+                        <th class="p-4">Kategori</th>
+                        <th class="p-4 text-right">Jumlah</th>
+                        <th class="p-4 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="transaction-table" class="text-sm divide-y divide-slate-50"></tbody>
+            </table>
+            <div id="empty-state" class="hidden p-20 text-center text-slate-400">
+                <i class="fas fa-inbox fa-3x mb-3 opacity-20"></i>
+                <p>Belum ada transaksi tercatat</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let allTransactions = [];
+let myChart;
+const loader = document.getElementById('loading');
+const form = document.getElementById('finance-form');
+
+// --- 1. SECURITY: SATPAM ROLE ---
+function checkAccess(user) {
+    if (!user) {
+        window.location.href = "/";
+        return;
+    }
+    const roles = user.app_metadata.roles;
+    if (!roles || !roles.includes('admin')) {
+        window.location.href = "/403.html";
+    } else {
+        fetchTransactions(); // User sah, ambil data
+    }
+}
+
+// --- 2. DATA FETCHING ---
+async function fetchTransactions() {
+    const user = netlifyIdentity.currentUser();
+    if (!user) return;
+
+    loader.classList.remove('hidden');
+    try {
+        const res = await fetch('/api/get-data', {
+            headers: { 'Authorization': `Bearer ${user.token.access_token}` }
+        });
+        if (!res.ok) throw new Error("Gagal mengambil data");
+        allTransactions = await res.json();
+        renderTable(allTransactions);
+    } catch (err) {
+        console.error(err);
+    } finally {
+        loader.classList.add('hidden');
+    }
+}
+
+// --- 3. UI RENDERING ---
+function renderTable(data) {
+    const tableBody = document.getElementById('transaction-table');
+    const emptyState = document.getElementById('empty-state');
+    tableBody.innerHTML = '';
+
+    if (!data || data.length === 0) {
+        emptyState.classList.remove('hidden');
+    } else {
+        emptyState.classList.add('hidden');
+        data.forEach(item => {
+            const isIncome = item.type === 'income';
+            tableBody.innerHTML += `
+                <tr class="hover:bg-slate-50 transition group">
+                    <td class="p-4 text-slate-500">${new Date(item.date).toLocaleDateString('id-ID')}</td>
+                    <td class="p-4 font-semibold text-slate-700">${item.desc}</td>
+                    <td class="p-4">
+                        <span class="px-3 py-1 rounded-lg text-[10px] font-bold uppercase ${isIncome ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                            ${isIncome ? 'Masuk' : 'Keluar'}
+                        </span>
+                    </td>
+                    <td class="p-4 text-right font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}">
+                        Rp ${parseFloat(item.amount).toLocaleString('id-ID')}
+                    </td>
+                    <td class="p-4 text-center">
+                        <button onclick="deleteData('${item._id}')" class="text-slate-300 hover:text-red-500 transition-colors">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+    updateSummary(data);
+    updateChart(data);
+}
+
+// --- 4. LOGIC: SUMMARIZE ---
+function updateSummary(data) {
+    let inc = 0, exp = 0;
+    data.forEach(t => t.type === 'income' ? inc += parseFloat(t.amount) : exp += parseFloat(t.amount));
+    document.getElementById('total-income').innerText = `Rp ${inc.toLocaleString('id-ID')}`;
+    document.getElementById('total-expense').innerText = `Rp ${exp.toLocaleString('id-ID')}`;
+    document.getElementById('total-balance').innerText = `Rp ${(inc - exp).toLocaleString('id-ID')}`;
+}
+
+// --- 5. LOGIC: CHART ---
+function updateChart(data) {
+    const ctx = document.getElementById('financeChart').getContext('2d');
+    const slice = [...data].slice(0, 7).reverse();
+    const labels = slice.map(t => new Date(t.date).toLocaleDateString('id-ID', {day:'numeric', month:'short'}));
+    
+    if (myChart) myChart.destroy();
+    myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { 
+                    label: 'Masuk', 
+                    data: slice.map(t => t.type === 'income' ? t.amount : 0), 
+                    borderColor: '#10b981', 
+                    tension: 0.4, 
+                    fill: true, 
+                    backgroundColor: 'rgba(16,185,129,0.05)',
+                    borderWidth: 3
+                },
+                { 
+                    label: 'Keluar', 
+                    data: slice.map(t => t.type === 'expense' ? t.amount : 0), 
+                    borderColor: '#ef4444', 
+                    tension: 0.4, 
+                    fill: true, 
+                    backgroundColor: 'rgba(239,68,68,0.05)',
+                    borderWidth: 3
+                }
+            ]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
+        }
+    });
+}
+
+// --- 6. ACTIONS (ADD, DELETE, EXPORT, FILTER) ---
+form.onsubmit = async (e) => {
+    e.preventDefault();
+    const user = netlifyIdentity.currentUser();
+    if (!user) return;
+
+    loader.classList.remove('hidden');
+    const payload = {
+        desc: document.getElementById('desc').value,
+        amount: document.getElementById('amount').value,
+        type: document.getElementById('type').value,
+        date: new Date().toISOString()
+    };
+
+    try {
+        const res = await fetch('/api/add-data', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${user.token.access_token}` },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            form.reset();
+            await fetchTransactions();
+        }
+    } catch (err) { console.error(err); }
+    loader.classList.add('hidden');
+};
+
+async function deleteData(id) {
+    if (!confirm("Hapus data ini secara permanen?")) return;
+    const user = netlifyIdentity.currentUser();
+    loader.classList.remove('hidden');
+    try {
+        const res = await fetch('/api/delete-data', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${user.token.access_token}` },
+            body: JSON.stringify({ id })
+        });
+        if (res.ok) await fetchTransactions();
+    } catch (err) { console.error(err); }
+    loader.classList.add('hidden');
+}
+
+function exportToCSV() {
+    if (allTransactions.length === 0) return alert("Data kosong");
+    let csv = "Tanggal,Deskripsi,Tipe,Jumlah\n";
+    allTransactions.forEach(t => {
+        csv += `${new Date(t.date).toLocaleDateString()},${t.desc},${t.type},${t.amount}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Laporan_Keuangan_${new Date().toLocaleDateString()}.csv`;
+    a.click();
+}
+
+function filterData(type, event) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active-filter'));
+    event.currentTarget.classList.add('active-filter');
+    const filtered = type === 'all' ? allTransactions : allTransactions.filter(t => t.type === type);
+    renderTable(filtered);
+}
+
+// --- 7. AUTH LISTENERS ---
+netlifyIdentity.on('init', user => checkAccess(user));
+netlifyIdentity.on('login', user => checkAccess(user));
+netlifyIdentity.on('logout', () => window.location.href = "/");
+</script>

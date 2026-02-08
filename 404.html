@@ -1,0 +1,48 @@
+---
+permalink: /404.html
+layout: default
+---
+
+<div class="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-50">
+    <div class="absolute top-0 -left-4 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob"></div>
+    <div class="absolute -bottom-8 right-20 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-4000"></div>
+
+    <div class="relative z-10 text-center px-6">
+        <div class="relative inline-block mb-8">
+            <h1 class="text-[12rem] font-black text-slate-200 leading-none select-none">404</h1>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <i class="fas fa-search-dollar text-6xl text-blue-600 animate-bounce"></i>
+            </div>
+        </div>
+
+        <h2 class="text-3xl font-bold text-slate-800 mb-4">Halaman Tidak Ditemukan</h2>
+        <p class="text-slate-500 max-w-md mx-auto mb-10 leading-relaxed">
+            Maaf, halaman yang Anda cari tidak tersedia atau telah dipindahkan ke alamat lain. 
+            Pastikan URL yang Anda masukkan sudah benar.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-2xl hover:bg-blue-700 transition transform active:scale-95 shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
+                <i class="fas fa-home"></i> Kembali ke Beranda
+            </a>
+            <button onclick="history.back()" class="bg-white text-slate-600 font-bold py-3 px-8 rounded-2xl border border-slate-200 hover:bg-slate-50 transition flex items-center justify-center gap-2">
+                <i class="fas fa-arrow-left"></i> Kembali Sebelumnya
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes blob {
+        0% { transform: translate(0px, 0px) scale(1); }
+        33% { transform: translate(30px, -50px) scale(1.1); }
+        66% { transform: translate(-20px, 20px) scale(0.9); }
+        100% { transform: translate(0px, 0px) scale(1); }
+    }
+    .animate-blob {
+        animation: blob 7s infinite;
+    }
+    .animation-delay-4000 {
+        animation-delay: 4s;
+    }
+</style>

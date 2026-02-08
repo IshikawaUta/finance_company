@@ -1,0 +1,47 @@
+# Site settings
+title: FinanceCore Pro
+email: admin@admin.com
+description: >-
+  Sistem Manajemen Keuangan Perusahaan Modern berbasis Jekyll, 
+  Netlify Functions, dan MongoDB Atlas.
+
+# Konfigurasi URL
+baseurl: "" 
+url: "https://finance-company.netlify.app"
+
+# Identitas Sosmed (Opsional)
+twitter_username: IshikawaUta
+github_username:  IshikawaUta
+
+# Build settings
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# Pengaturan Folder & File
+# Sangat penting untuk mengecualikan folder node_modules dan vendor 
+# agar proses build Jekyll lebih cepat dan tidak error.
+exclude:
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - package.json
+  - package-lock.json
+  - netlify/
+
+# Custom Collections (Opsional jika ingin menambah modul di masa depan)
+collections:
+  admin:
+    output: true
+    permalink: /admin/:path/
+
+# Markdown Settings
+markdown: kramdown
+highlighter: rouge
