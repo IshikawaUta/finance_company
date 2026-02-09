@@ -27,6 +27,7 @@ exclude:
   - gemfiles/
   - Gemfile
   - Gemfile.lock
+  - deno.lock
   - node_modules/
   - vendor/bundle/
   - vendor/cache/

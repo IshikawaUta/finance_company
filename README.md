@@ -36,8 +36,8 @@ Sebelum melakukan instalasi, Anda wajib menyiapkan 3 layanan berikut:
 ### 1. Clone Repository
 Buka terminal dan jalankan:
 ```bash
-git clone https://github.com/IshikawaUta/finance-company.git
-cd finance-company
+git clone https://github.com/IshikawaUta/finance_company.git
+cd finance_company
 
 ```
 
