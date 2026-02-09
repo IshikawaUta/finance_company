@@ -1,0 +1,114 @@
+---
+layout: default
+---
+<div class="container mx-auto px-4 py-8 max-w-4xl bg-white" id="printable-area">
+    <div class="border-b-4 border-slate-800 pb-6 mb-8 flex justify-between items-end">
+      <div>
+        <h1 class="text-4xl font-black text-slate-900">LAPORAN KEUANGAN</h1>
+        <p class="text-slate-500 font-bold uppercase tracking-widest" id="report-period">Bulan: -</p>
+      </div>
+      <div class="text-right">
+        <h2 class="text-xl font-bold text-blue-600">FinanceCore</h2>
+        <p class="text-xs text-slate-400">Generated on: <span id="current-date"></span></p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4 mb-10">
+        <div class="border-2 border-slate-100 p-4 rounded-xl">
+            <p class="text-[10px] font-bold text-slate-400 uppercase">Total Pemasukan</p>
+            <p class="text-xl font-bold text-green-600" id="rep-income">Rp 0</p>
+        </div>
+        <div class="border-2 border-slate-100 p-4 rounded-xl">
+            <p class="text-[10px] font-bold text-slate-400 uppercase">Total Pengeluaran</p>
+            <p class="text-xl font-bold text-red-600" id="rep-expense">Rp 0</p>
+        </div>
+        <div class="border-2 border-slate-800 bg-slate-800 p-4 rounded-xl">
+            <p class="text-[10px] font-bold text-slate-100 uppercase">Saldo Akhir</p>
+            <p class="text-xl font-bold text-white" id="rep-balance">Rp 0</p>
+        </div>
+    </div>
+
+    <table class="w-full text-left border-collapse">
+        <thead>
+            <tr class="border-b-2 border-slate-800 text-xs uppercase font-bold text-slate-800">
+                <th class="py-3 px-2">Tanggal</th>
+                <th class="py-3 px-2">Deskripsi</th>
+                <th class="py-3 px-2">Tipe</th>
+                <th class="py-3 px-2 text-right">Jumlah</th>
+            </tr>
+        </thead>
+        <tbody id="report-table" class="text-sm">
+            </tbody>
+    </table>
+
+    <div class="mt-20 grid grid-cols-2 gap-20 text-center">
+        <div></div>
+        <div class="border-t border-slate-300 pt-4">
+            <p class="text-sm font-bold text-slate-800">Manajer Keuangan</p>
+            <div class="h-20"></div>
+            <p class="text-sm font-bold">( .................................... )</p>
+        </div>
+    </div>
+</div>
+
+<div class="fixed bottom-10 right-10 flex gap-4 print:hidden">
+    <button onclick="window.history.back()" class="bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-bold hover:bg-slate-300 transition">
+        Kembali
+    </button>
+    <button onclick="window.print()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-xl hover:bg-blue-700 transition">
+        <i class="fas fa-print mr-2"></i> Cetak ke PDF
+    </button>
+</div>
+
+<style>
+@media print {
+    body { bg-color: white; }
+    .print\:hidden { display: none !important; }
+    #printable-area { width: 100%; max-width: 100%; padding: 0; margin: 0; }
+}
+</style>
+
+<script>
+async function loadReport() {
+    // Ambil filter dari URL (misal: ?month=0&year=2024)
+    const params = new URLSearchParams(window.location.search);
+    const month = params.get('month');
+    const year = params.get('year');
+    
+    document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID');
+    document.getElementById('report-period').innerText = `Periode: ${month !== 'all' ? month : ''} ${year}`;
+
+    const user = netlifyIdentity.currentUser();
+    const res = await fetch('/api/get-data', { 
+        headers: { 'Authorization': `Bearer ${user.token.access_token}` } 
+    });
+    let data = await res.json();
+
+    // Filter data sesuai parameter
+    if (month !== 'all') data = data.filter(t => new Date(t.date).getMonth() === parseInt(month));
+    if (year !== 'all') data = data.filter(t => new Date(t.date).getFullYear() === parseInt(year));
+
+    const table = document.getElementById('report-table');
+    let inc = 0, exp = 0;
+
+    data.forEach(item => {
+        const isInc = item.type === 'income';
+        if(isInc) inc += item.amount; else exp += item.amount;
+        
+        table.innerHTML += `
+            <tr class="border-b border-slate-100">
+                <td class="py-3 px-2">${new Date(item.date).toLocaleDateString('id-ID')}</td>
+                <td class="py-3 px-2 font-medium">${item.desc}</td>
+                <td class="py-3 px-2 text-[10px] uppercase font-bold ${isInc ? 'text-green-600' : 'text-red-600'}">${isInc ? 'Masuk' : 'Keluar'}</td>
+                <td class="py-3 px-2 text-right font-bold">Rp ${item.amount.toLocaleString('id-ID')}</td>
+            </tr>
+        `;
+    });
+
+    document.getElementById('rep-income').innerText = `Rp ${inc.toLocaleString('id-ID')}`;
+    document.getElementById('rep-expense').innerText = `Rp ${exp.toLocaleString('id-ID')}`;
+    document.getElementById('rep-balance').innerText = `Rp ${(inc - exp).toLocaleString('id-ID')}`;
+}
+
+netlifyIdentity.on('init', () => loadReport());
+</script>

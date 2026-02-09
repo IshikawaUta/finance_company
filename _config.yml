@@ -7,7 +7,7 @@ description: >-
 
 # Konfigurasi URL
 baseurl: "" 
-url: "https://finance-company.netlify.app"
+url: "https://finance-company-mg.netlify.app"
 
 # Identitas Sosmed (Opsional)
 twitter_username: IshikawaUta
